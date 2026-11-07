@@ -33,6 +33,8 @@ import {
   editorBodyFontSizeOptions,
   editorParagraphSpacingPxMax,
   editorParagraphSpacingPxMin,
+  editorTableCellPaddingPxMax,
+  editorTableCellPaddingPxMin,
   reorderTitlebarActions,
   type EditorPreferences,
   type SidebarLayoutMode,
@@ -553,6 +555,27 @@ export function EditorSettings({
               preferences={preferences}
               resetLabel={`${translate("settings.editor.contentWidth")} ${translate("settings.editor.shortcutsReset")}`}
               onUpdatePreferences={onUpdatePreferences}
+            />
+          }
+        />
+        <SettingsRow
+          title={translate("settings.editor.tableCellPadding")}
+          description={translate("settings.editor.tableCellPaddingDescription")}
+          action={
+            <SettingsNumberInput
+              label={translate("settings.editor.tableCellPadding")}
+              min={editorTableCellPaddingPxMin}
+              max={editorTableCellPaddingPxMax}
+              unit="px"
+              value={preferences.tableCellPaddingPx}
+              onChange={(value) =>
+                onUpdatePreferences({
+                  ...preferences,
+                  tableCellPaddingPx:
+                    clampNumber(value, editorTableCellPaddingPxMin, editorTableCellPaddingPxMax) ??
+                    preferences.tableCellPaddingPx
+                })
+              }
             />
           }
         />

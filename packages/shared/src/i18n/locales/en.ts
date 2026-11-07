@@ -164,6 +164,8 @@ const messages: BaseLocaleMessages = {
   "settings.editor.contentWidth.narrow": "Narrow",
   "settings.editor.contentWidth.default": "Default",
   "settings.editor.contentWidth.wide": "Wide",
+  "settings.editor.tableCellPadding": "Table cell spacing",
+  "settings.editor.tableCellPaddingDescription": "Inner padding of table cells, in pixels. Horizontal padding scales with it.",
   "settings.editor.tableColumnWidthMode": "Default table column width",
   "settings.editor.tableColumnWidthModeDescription": "Initial column width mode for tables that do not have their own saved mode.",
   "settings.editor.tableColumnWidthMode.even": "Even",

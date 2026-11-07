@@ -62,6 +62,7 @@ type MarkdownPaperProps = {
   spellcheckEnabled?: CodeMirrorPaperSurfaceProps["spellcheckEnabled"];
   spellcheckIgnoredWords?: CodeMirrorPaperSurfaceProps["spellcheckIgnoredWords"];
   spellchecker?: CodeMirrorPaperSurfaceProps["spellchecker"];
+  tableCellPaddingPx?: number;
   tableColumnWidthMode?: TableColumnWidthModePreference;
   topInset?: "tabs" | "titlebar";
   typewriterModeEnabled?: CodeMirrorPaperSurfaceProps["typewriterModeEnabled"];
@@ -75,6 +76,7 @@ type MarkdownPaperStyle = CSSProperties & {
   "--editor-font-family"?: string;
   "--editor-heading-font-family"?: string;
   "--editor-paragraph-spacing"?: string;
+  "--editor-table-cell-padding"?: string;
 };
 
 function editorBottomPadding(bottomOverlayInset: number) {
@@ -134,6 +136,7 @@ export function MarkdownPaper({
   spellcheckEnabled = false,
   spellcheckIgnoredWords,
   spellchecker,
+  tableCellPaddingPx = 8,
   tableColumnWidthMode = "auto",
   topInset = "titlebar",
   typewriterModeEnabled = false,
@@ -155,6 +158,8 @@ export function MarkdownPaper({
     lineHeight,
     maxWidth: `${resolvedContentWidth}px`,
     "--editor-paragraph-spacing": `${paragraphSpacingPx}px`,
+    // Keep the original 8px / 12px ratio while making cell spacing editable.
+    "--editor-table-cell-padding": `${tableCellPaddingPx}px ${Math.round(tableCellPaddingPx * 1.5)}px`,
     paddingBottom: editorBottomPadding(bottomOverlayInset)
   } satisfies MarkdownPaperStyle;
   const topInsetClassName = topInset === "tabs" ? "pt-24 max-[900px]:pt-20" : "pt-14 max-[900px]:pt-10";

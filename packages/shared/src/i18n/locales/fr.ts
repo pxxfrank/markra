@@ -576,6 +576,8 @@ const messages: LocaleMessages = {
   "settings.editor.contentWidth.narrow": "Étroite",
   "settings.editor.contentWidth.default": "Par défaut",
   "settings.editor.contentWidth.wide": "Large",
+  "settings.editor.tableCellPadding": "Espacement des cellules de tableau",
+  "settings.editor.tableCellPaddingDescription": "Marge interne des cellules, en pixels. L'espacement horizontal suit la même proportion.",
   "settings.editor.tableColumnWidthMode": "Largeur de colonnes par défaut",
   "settings.editor.tableColumnWidthModeDescription": "Mode initial de largeur des colonnes pour les tableaux sans mode enregistré.",
   "settings.editor.tableColumnWidthMode.even": "Largeurs égales",

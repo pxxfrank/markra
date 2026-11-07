@@ -576,6 +576,8 @@ const messages: LocaleMessages = {
   "settings.editor.contentWidth.narrow": "Узкая",
   "settings.editor.contentWidth.default": "По умолчанию",
   "settings.editor.contentWidth.wide": "Широкая",
+  "settings.editor.tableCellPadding": "Отступы в ячейках таблицы",
+  "settings.editor.tableCellPaddingDescription": "Внутренние отступы ячеек в пикселях. Горизонтальный отступ меняется пропорционально.",
   "settings.editor.tableColumnWidthMode": "Ширина столбцов таблиц по умолчанию",
   "settings.editor.tableColumnWidthModeDescription": "Начальный режим ширины столбцов для таблиц без собственного сохраненного режима.",
   "settings.editor.tableColumnWidthMode.even": "Равная ширина",

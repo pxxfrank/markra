@@ -576,6 +576,8 @@ const messages: LocaleMessages = {
   "settings.editor.contentWidth.narrow": "Estrecho",
   "settings.editor.contentWidth.default": "Predeterminado",
   "settings.editor.contentWidth.wide": "Ancho",
+  "settings.editor.tableCellPadding": "Espaciado de celdas de tabla",
+  "settings.editor.tableCellPaddingDescription": "Margen interior de las celdas, en píxeles. El espaciado horizontal se ajusta proporcionalmente.",
   "settings.editor.tableColumnWidthMode": "Ancho de columnas predeterminado",
   "settings.editor.tableColumnWidthModeDescription": "Modo inicial de ancho de columnas para tablas que no tienen un modo guardado propio.",
   "settings.editor.tableColumnWidthMode.even": "Ancho uniforme",

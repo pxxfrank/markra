@@ -85,6 +85,7 @@ describe("editor preferences", () => {
       spellcheckEnabled: false,
       spellcheckIgnoredWords: [],
       spellcheckLanguage: "en",
+      tableCellPaddingPx: 8,
       tableColumnWidthMode: "auto",
       titlebarActions: [
         { id: "aiAgent", visible: true },
@@ -245,6 +246,7 @@ describe("editor preferences", () => {
       spellcheckEnabled: false,
       spellcheckIgnoredWords: [],
       spellcheckLanguage: "en",
+      tableCellPaddingPx: 8,
       tableColumnWidthMode: "auto",
       titlebarActions: [
         { id: "aiAgent", visible: true },
@@ -288,6 +290,15 @@ describe("editor preferences", () => {
     expect((normalizeEditorPreferences({ paragraphSpacingPx: -8 }) as Record<string, unknown>).paragraphSpacingPx).toBe(0);
     expect((normalizeEditorPreferences({ paragraphSpacingPx: 120 }) as Record<string, unknown>).paragraphSpacingPx).toBe(32);
     expect((normalizeEditorPreferences({ paragraphSpacingPx: "loose" }) as Record<string, unknown>).paragraphSpacingPx).toBe(8);
+  });
+
+  it("normalizes custom table cell spacing in pixels", () => {
+    expect(normalizeEditorPreferences({}).tableCellPaddingPx).toBe(8);
+    expect(normalizeEditorPreferences({ tableCellPaddingPx: 20 }).tableCellPaddingPx).toBe(20);
+    expect(normalizeEditorPreferences({ tableCellPaddingPx: 0 }).tableCellPaddingPx).toBe(0);
+    expect((normalizeEditorPreferences({ tableCellPaddingPx: -8 }) as Record<string, unknown>).tableCellPaddingPx).toBe(0);
+    expect((normalizeEditorPreferences({ tableCellPaddingPx: 120 }) as Record<string, unknown>).tableCellPaddingPx).toBe(32);
+    expect((normalizeEditorPreferences({ tableCellPaddingPx: "loose" }) as Record<string, unknown>).tableCellPaddingPx).toBe(8);
   });
 
   it("normalizes the typewriter mode preference", () => {
@@ -801,6 +812,7 @@ describe("editor preferences", () => {
       spellcheckEnabled: false,
       spellcheckIgnoredWords: [],
       spellcheckLanguage: "en",
+      tableCellPaddingPx: 8,
       tableColumnWidthMode: "auto",
       titlebarActions: [
         { id: "aiAgent", visible: true },
@@ -910,6 +922,7 @@ describe("editor preferences", () => {
       spellcheckEnabled: true,
       spellcheckIgnoredWords: [],
       spellcheckLanguage: "en",
+      tableCellPaddingPx: 8,
       tableColumnWidthMode: "even",
       titlebarActions: [
         { id: "theme", visible: true },
@@ -1017,6 +1030,7 @@ describe("editor preferences", () => {
       spellcheckEnabled: true,
       spellcheckIgnoredWords: [],
       spellcheckLanguage: "en",
+      tableCellPaddingPx: 8,
       tableColumnWidthMode: "even",
       titlebarActions: [
         { id: "theme", visible: true },

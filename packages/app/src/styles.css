@@ -1453,7 +1453,7 @@
 
   .markdown-paper .cm-markra-table th,
   .markdown-paper .cm-markra-table td {
-    padding: 8px 12px !important;
+    padding: var(--editor-table-cell-padding, 8px 12px) !important;
     border: 1px solid var(--editor-border-strong) !important;
     caret-color: var(--editor-caret-color) !important;
     outline: none !important;
@@ -1487,7 +1487,7 @@
   .markdown-paper[data-editor-theme="github"] .cm-markra-table td,
   .markdown-paper[data-editor-theme="github-dark"] .cm-markra-table th,
   .markdown-paper[data-editor-theme="github-dark"] .cm-markra-table td {
-    padding: 6px 13px !important;
+    padding: var(--editor-table-cell-padding, 8px 12px) !important;
     border-color: var(--editor-border) !important;
   }
 

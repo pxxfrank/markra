@@ -399,13 +399,38 @@ describe("EditorSettings", () => {
     expect(spacingInput).toHaveAttribute("min", "0");
     expect(spacingInput).toHaveAttribute("max", "32");
     expect(spacingInput).toHaveValue(8);
-    expect(screen.getByText("px")).toBeInTheDocument();
+    expect(screen.getAllByText("px").length).toBeGreaterThan(0);
 
     fireEvent.change(spacingInput, { target: { value: "14" } });
 
     expect(onUpdatePreferences).toHaveBeenCalledWith({
       ...defaultEditorPreferences,
       paragraphSpacingPx: 14
+    });
+  });
+
+  it("edits table cell spacing as a pixel value", () => {
+    const onUpdatePreferences = vi.fn();
+
+    render(
+      <EditorSettings
+        preferences={defaultEditorPreferences}
+        translate={translate}
+        onUpdatePreferences={onUpdatePreferences}
+      />
+    );
+
+    const paddingInput = screen.getByRole("spinbutton", { name: "Table cell spacing" });
+
+    expect(paddingInput).toHaveAttribute("min", "0");
+    expect(paddingInput).toHaveAttribute("max", "32");
+    expect(paddingInput).toHaveValue(8);
+
+    fireEvent.change(paddingInput, { target: { value: "20" } });
+
+    expect(onUpdatePreferences).toHaveBeenCalledWith({
+      ...defaultEditorPreferences,
+      tableCellPaddingPx: 20
     });
   });
 

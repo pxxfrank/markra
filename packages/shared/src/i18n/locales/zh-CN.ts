@@ -164,6 +164,8 @@ const messages: LocaleMessages = {
   "settings.editor.contentWidth.narrow": "窄",
   "settings.editor.contentWidth.default": "默认",
   "settings.editor.contentWidth.wide": "宽",
+  "settings.editor.tableCellPadding": "表格单元格间距",
+  "settings.editor.tableCellPaddingDescription": "表格单元格的内边距（像素），横向间距会按比例随之调整。",
   "settings.editor.tableColumnWidthMode": "默认表格列宽",
   "settings.editor.tableColumnWidthModeDescription": "没有单独保存模式的表格打开时使用的初始列宽模式。",
   "settings.editor.tableColumnWidthMode.even": "等宽",

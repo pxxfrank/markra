@@ -576,6 +576,8 @@ const messages: LocaleMessages = {
   "settings.editor.contentWidth.narrow": "狭い",
   "settings.editor.contentWidth.default": "標準",
   "settings.editor.contentWidth.wide": "広い",
+  "settings.editor.tableCellPadding": "表のセル間隔",
+  "settings.editor.tableCellPaddingDescription": "表セルの内側余白（ピクセル）。横方向の余白も比例して変わります。",
   "settings.editor.tableColumnWidthMode": "表の既定の列幅",
   "settings.editor.tableColumnWidthModeDescription": "個別に保存されたモードがない表に使う初期の列幅モードです。",
   "settings.editor.tableColumnWidthMode.even": "均等幅",

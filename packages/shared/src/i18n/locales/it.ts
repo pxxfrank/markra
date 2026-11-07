@@ -576,6 +576,8 @@ const messages: LocaleMessages = {
   "settings.editor.contentWidth.narrow": "Stretta",
   "settings.editor.contentWidth.default": "Predefinita",
   "settings.editor.contentWidth.wide": "Ampia",
+  "settings.editor.tableCellPadding": "Spaziatura celle tabella",
+  "settings.editor.tableCellPaddingDescription": "Margine interno delle celle, in pixel. La spaziatura orizzontale si adatta in proporzione.",
   "settings.editor.tableColumnWidthMode": "Larghezza colonne predefinita",
   "settings.editor.tableColumnWidthModeDescription": "Modalità iniziale della larghezza colonne per le tabelle senza una modalità salvata.",
   "settings.editor.tableColumnWidthMode.even": "Larghezze uguali",

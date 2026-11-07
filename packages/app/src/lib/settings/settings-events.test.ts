@@ -250,6 +250,7 @@ describe("settings events", () => {
       spellcheckEnabled: true,
       spellcheckIgnoredWords: [],
       spellcheckLanguage: "en",
+      tableCellPaddingPx: 8,
       tableColumnWidthMode: "even",
       titlebarActions: [
         { id: "theme", visible: true },

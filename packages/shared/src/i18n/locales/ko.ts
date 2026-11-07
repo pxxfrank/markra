@@ -576,6 +576,8 @@ const messages: LocaleMessages = {
   "settings.editor.contentWidth.narrow": "좁게",
   "settings.editor.contentWidth.default": "기본",
   "settings.editor.contentWidth.wide": "넓게",
+  "settings.editor.tableCellPadding": "표 셀 간격",
+  "settings.editor.tableCellPaddingDescription": "표 셀 안쪽 여백(픽셀)입니다. 가로 여백도 비례해 조정됩니다.",
   "settings.editor.tableColumnWidthMode": "기본 표 열 너비",
   "settings.editor.tableColumnWidthModeDescription": "저장된 개별 모드가 없는 표에 사용할 초기 열 너비 모드입니다.",
   "settings.editor.tableColumnWidthMode.even": "균등 너비",

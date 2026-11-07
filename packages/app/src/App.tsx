@@ -4655,6 +4655,7 @@ function WorkspaceApp() {
               spellcheckEnabled={spellcheckFeatureEnabled && editorPreferences.preferences.spellcheckEnabled}
               spellcheckIgnoredWords={editorPreferences.preferences.spellcheckIgnoredWords}
               spellchecker={appSpellchecker}
+              tableCellPaddingPx={editorPreferences.preferences.tableCellPaddingPx}
               tableColumnWidthMode={editorPreferences.preferences.tableColumnWidthMode}
               onAddSpellcheckIgnoredWord={handleAddSpellcheckIgnoredWord}
               topInset="titlebar"
@@ -5196,6 +5197,7 @@ function WorkspaceApp() {
                             wordCount={sideDocumentWordCount}
                           />
                         ) : null}
+                        tableCellPaddingPx={editorPreferences.preferences.tableCellPaddingPx}
                         tableColumnWidthMode={editorPreferences.preferences.tableColumnWidthMode}
                         typewriterModeEnabled={editorPreferences.preferences.typewriterModeEnabled}
                         vimModeEnabled={editorPreferences.preferences.vimModeEnabled}

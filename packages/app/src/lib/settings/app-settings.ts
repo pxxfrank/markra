@@ -428,6 +428,7 @@ export type EditorPreferences = {
   spellcheckEnabled: boolean;
   spellcheckIgnoredWords: string[];
   spellcheckLanguage: SpellcheckLanguage;
+  tableCellPaddingPx: number;
   tableColumnWidthMode: TableColumnWidthModePreference;
   titlebarActions: TitlebarActionPreference[];
   viewMode: ViewMode;
@@ -538,6 +539,7 @@ export const defaultEditorPreferences: EditorPreferences = {
   spellcheckEnabled: false,
   spellcheckIgnoredWords: [],
   spellcheckLanguage: defaultSpellcheckLanguage,
+  tableCellPaddingPx: 8,
   tableColumnWidthMode: "auto",
   titlebarActions: [...defaultTitlebarActions],
   viewMode: "daily",
@@ -591,6 +593,8 @@ export const editorBodyFontSizeOptions = [14, 15, 16, 17, 18, 20, 22, 24, 28, 32
 const editorLineHeightOptions = [1.5, 1.65, 1.8] as const;
 export const editorParagraphSpacingPxMin = 0;
 export const editorParagraphSpacingPxMax = 32;
+export const editorTableCellPaddingPxMin = 0;
+export const editorTableCellPaddingPxMax = 32;
 const sidebarLayoutModeOptions: readonly SidebarLayoutMode[] = ["stacked", "tabs"];
 const tableColumnWidthModeOptions: readonly TableColumnWidthModePreference[] = ["even", "auto"];
 
@@ -1772,6 +1776,7 @@ export function normalizeEditorPreferences(value: unknown): EditorPreferences {
       ? preferences.spellcheckLanguage
       : defaultEditorPreferences.spellcheckLanguage,
     spellcheckIgnoredWords: normalizeSpellcheckIgnoredWords(preferences.spellcheckIgnoredWords),
+    tableCellPaddingPx: normalizeEditorTableCellPaddingPx(preferences.tableCellPaddingPx),
     tableColumnWidthMode: normalizeTableColumnWidthMode(preferences.tableColumnWidthMode),
     titlebarActions: normalizeTitlebarActions(preferences.titlebarActions),
     viewMode: isViewMode(preferences.viewMode) ? preferences.viewMode : defaultEditorPreferences.viewMode,
@@ -1809,6 +1814,12 @@ function normalizeEditorParagraphSpacingPx(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) return defaultEditorPreferences.paragraphSpacingPx;
 
   return Math.min(editorParagraphSpacingPxMax, Math.max(editorParagraphSpacingPxMin, Math.round(value)));
+}
+
+function normalizeEditorTableCellPaddingPx(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return defaultEditorPreferences.tableCellPaddingPx;
+
+  return Math.min(editorTableCellPaddingPxMax, Math.max(editorTableCellPaddingPxMin, Math.round(value)));
 }
 
 export function normalizeSpellcheckIgnoredWords(value: unknown): string[] {

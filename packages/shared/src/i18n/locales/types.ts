@@ -193,6 +193,8 @@ export type I18nKey =
   | "settings.editor.contentWidth.narrow"
   | "settings.editor.contentWidth.default"
   | "settings.editor.contentWidth.wide"
+  | "settings.editor.tableCellPadding"
+  | "settings.editor.tableCellPaddingDescription"
   | "settings.editor.tableColumnWidthMode"
   | "settings.editor.tableColumnWidthModeDescription"
   | "settings.editor.tableColumnWidthMode.even"

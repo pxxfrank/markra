@@ -486,6 +486,23 @@ describe("editor stylesheet", () => {
     expect(styles).not.toContain("margin-block-start: 10px;");
   });
 
+  it("drives table cell spacing from the editor preference variable", () => {
+    const styles = readFileSync(`${process.cwd()}/src/styles.css`, "utf8");
+    const tableStart = styles.indexOf(".markdown-paper .cm-markra-table th,");
+    const tableEnd = styles.indexOf(
+      ".markdown-paper .cm-line:has(> .cm-markra-horizontal-rule)",
+      tableStart
+    );
+    const tableStyles = styles.slice(tableStart, tableEnd);
+
+    expect(tableStart).toBeGreaterThanOrEqual(0);
+    expect(tableEnd).toBeGreaterThan(tableStart);
+    expect(tableStyles).toContain(
+      "padding: var(--editor-table-cell-padding, 8px 12px) !important"
+    );
+    expect(tableStyles).not.toContain("padding: 6px 13px !important");
+  });
+
   it("keeps CodeMirror block rhythm aligned with the original visual editor", () => {
     const styles = readFileSync(`${process.cwd()}/src/styles.css`, "utf8");
 
@@ -522,7 +539,7 @@ describe("editor stylesheet", () => {
       '.markdown-paper[data-editor-theme="github-dark"] .cm-markra-table th',
     );
     expect(styles).toContain(".markdown-paper .cm-markra-table th");
-    expect(styles).toContain("padding: 8px 12px !important");
+    expect(styles).toContain("padding: var(--editor-table-cell-padding, 8px 12px) !important");
     expect(styles).toContain(
       ".markdown-paper .cm-line:has(> .cm-markra-horizontal-rule)",
     );

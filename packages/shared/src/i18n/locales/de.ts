@@ -576,6 +576,8 @@ const messages: LocaleMessages = {
   "settings.editor.contentWidth.narrow": "Schmal",
   "settings.editor.contentWidth.default": "Standard",
   "settings.editor.contentWidth.wide": "Breit",
+  "settings.editor.tableCellPadding": "Zellenabstand in Tabellen",
+  "settings.editor.tableCellPaddingDescription": "Innenabstand von Tabellenzellen in Pixeln. Der horizontale Abstand skaliert entsprechend.",
   "settings.editor.tableColumnWidthMode": "Standard-Spaltenbreite für Tabellen",
   "settings.editor.tableColumnWidthModeDescription": "Anfänglicher Spaltenbreitenmodus für Tabellen ohne eigenen gespeicherten Modus.",
   "settings.editor.tableColumnWidthMode.even": "Gleich breit",

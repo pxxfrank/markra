@@ -287,6 +287,8 @@ vi.mock("../lib/settings/app-settings", () => ({
   splitVisualPanePercentMax: 75,
   editorParagraphSpacingPxMin: 0,
   editorParagraphSpacingPxMax: 32,
+  editorTableCellPaddingPxMin: 0,
+  editorTableCellPaddingPxMax: 32,
   defaultEditorPreferences: {
     aiQuickActionPrompts: testAiQuickActionPrompts,
     aiWorkspaceAnimationEnabled: false,
@@ -352,6 +354,7 @@ vi.mock("../lib/settings/app-settings", () => ({
     spellcheckEnabled: false,
     spellcheckIgnoredWords: [],
     spellcheckLanguage: "en",
+    tableCellPaddingPx: 8,
     tableColumnWidthMode: "auto",
     titlebarActions: [
       { id: "aiAgent", visible: true },
@@ -1502,6 +1505,7 @@ export function installAppTestHarness() {
       spellcheckEnabled: false,
       spellcheckIgnoredWords: [],
       spellcheckLanguage: "en",
+      tableCellPaddingPx: 8,
       tableColumnWidthMode: "auto",
         titlebarActions: [
           { id: "aiAgent", visible: true },

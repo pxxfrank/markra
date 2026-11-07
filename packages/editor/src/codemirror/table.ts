@@ -852,15 +852,37 @@ function syncVisualTableCell(
     source,
   );
   const selectionNode = cell.ownerDocument.getSelection()?.anchorNode;
-  if (changed || !selectionNode || !cell.contains(selectionNode)) {
-    focusVisualTableCell(
-      view,
-      preview.from,
-      rowIndex,
-      columnIndex,
-      header,
-      caretOffset,
-    );
+  const selectionInsideCell = Boolean(selectionNode && cell.contains(selectionNode));
+  if (!cell.isConnected) {
+    // The widget was rebuilt, so the caret has to be recovered in a microtask
+    // against the fresh DOM.
+    if (changed || !selectionInsideCell) {
+      focusVisualTableCell(
+        view,
+        preview.from,
+        rowIndex,
+        columnIndex,
+        header,
+        caretOffset,
+      );
+    }
+    return;
+  }
+
+  // The widget kept its editing host. A healthy browser-owned caret must not
+  // be touched: resetting it races with the next character of a fast burst and
+  // makes those characters land in the Markdown source. Only re-anchor when
+  // the platform dropped the selection onto the shared table host (WebKit) or
+  // moved focus out of the table altogether.
+  const activeElement = cell.ownerDocument.activeElement;
+  const activeTable = cell.closest("table");
+  const focusInsideTable = Boolean(
+    activeElement instanceof Element &&
+      activeTable &&
+      (activeElement === activeTable || activeTable.contains(activeElement))
+  );
+  if (!selectionInsideCell || !focusInsideTable) {
+    placeVisualTableCellCaret(cell, caretOffset);
   }
 }
 
@@ -1186,6 +1208,64 @@ function tablePreviewContentKey(preview: TablePreview) {
   });
 }
 
+function sameTableShape(a: TablePreview, b: TablePreview) {
+  return (
+    a.header.length === b.header.length &&
+    a.rows.length === b.rows.length &&
+    a.rows.every((row, index) => row.length === b.rows[index]?.length)
+  );
+}
+
+// CodeMirror may offer any widget of the same class to updateDOM. Tying a DOM
+// tree to the runtime it was created with keeps two tables in one document
+// from claiming each other's editing host.
+const tableWidgetRuntimes = new WeakMap<HTMLElement, TableWidgetRuntime>();
+
+function syncReusedTableCells(
+  dom: HTMLElement,
+  view: CodeMirrorView,
+  preview: TablePreview,
+  images: ImagePreviewPluginOptions | undefined,
+  links: LinksPluginOptions | undefined,
+) {
+  const table = dom.querySelector<HTMLTableElement>(".cm-markra-table");
+  if (!table) return false;
+  const active = activeTableCell(table);
+  const session = tableEditingSessions.get(view);
+  // A revealed math/link source editor embeds document offsets in its DOM.
+  // Those ranges have to be recomputed by appendCell, so this rare editing
+  // state still takes the rebuild path instead of reusing stale positions.
+  if (
+    session?.inlineSourceVisible &&
+    session.tableFrom === Number(dom.dataset.tableFrom)
+  ) {
+    return false;
+  }
+  const tableAlignment = normalizedTableAlignment(preview) ?? "left";
+  dom.dataset.tableAlignment = tableAlignment;
+  table.dataset.tableAlignment = tableAlignment;
+
+  for (const cell of table.querySelectorAll<HTMLTableCellElement>("th, td")) {
+    const header = cell.dataset.tableHeader === "true";
+    const rowIndex = Number(cell.dataset.tableRow);
+    const columnIndex = Number(cell.dataset.tableColumn);
+    const cellPreview = header
+      ? preview.header[columnIndex]
+      : preview.rows[rowIndex]?.[columnIndex];
+    if (!cellPreview) return false;
+    cell.style.textAlign = preview.alignments[columnIndex] ?? "";
+    // Only redraw cells whose rendered content no longer matches the source.
+    // Typing leaves the browser-owned DOM already in sync (and keeps its
+    // caret), while external transactions such as undo or a document switch
+    // do need a repaint, including for the currently focused cell.
+    if (visualTableCellSource(cell) === cellPreview.source) continue;
+    const caretOffset = cell === active ? tableCellCaretOffset(cell) : undefined;
+    renderVisualTableCell(view, cell, cellPreview.source, images, links);
+    if (caretOffset !== undefined) placeVisualTableCellCaret(cell, caretOffset);
+  }
+  return true;
+}
+
 class TableWidget extends WidgetType {
   private readonly contentKey: string;
   private readonly labelsKey: string;
@@ -1240,10 +1320,36 @@ class TableWidget extends WidgetType {
     return true;
   }
 
-  updateDOM(dom: HTMLElement, _view: CodeMirrorView, from: this) {
-    if (!this.hasSameContent(from)) return false;
+  updateDOM(dom: HTMLElement, view: CodeMirrorView, from: this) {
+    if (tableWidgetRuntimes.get(dom) !== from.runtime) return false;
+    if (
+      from.defaultWidthMode !== this.defaultWidthMode ||
+      from.getDocumentKey !== this.getDocumentKey ||
+      from.images !== this.images ||
+      from.links !== this.links ||
+      from.labelsKey !== this.labelsKey
+    ) {
+      return false;
+    }
 
     const nextPreview = this.preview;
+    // Structural edits (adding/removing rows or columns) still need a fresh
+    // DOM, but typing only changes cell text. Destroying the contenteditable
+    // host on every keystroke drops the browser-owned selection, so the next
+    // characters of a fast input burst land in the Markdown source instead.
+    if (!sameTableShape(from.preview, nextPreview)) return false;
+    if (
+      !syncReusedTableCells(
+        dom,
+        view,
+        nextPreview,
+        this.images,
+        this.links,
+      )
+    ) {
+      return false;
+    }
+
     // Reused DOM listeners close over the previous widget, so both widget
     // generations must share the latest document positions and popup state.
     this.runtime = from.runtime;
@@ -1577,6 +1683,7 @@ class TableWidget extends WidgetType {
       event.preventDefault();
       event.clipboardData.setData("text/plain", text);
     });
+    tableWidgetRuntimes.set(wrapper, this.runtime);
     return wrapper;
   }
 }
@@ -1691,7 +1798,7 @@ const tableTheme = EditorView.baseTheme({
     border: "1px solid color-mix(in srgb, currentColor 18%, transparent)",
     cursor: "text",
     outline: "none",
-    padding: "0.42em 0.65em",
+    padding: "var(--editor-table-cell-padding, 0.42em 0.65em)",
     position: "relative",
     verticalAlign: "top",
   },

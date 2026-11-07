@@ -38,6 +38,7 @@ type SideDocumentPaneProps = {
   spellcheckIgnoredWords?: readonly string[];
   spellchecker?: Spellchecker;
   status?: ReactNode;
+  tableCellPaddingPx?: number;
   tableColumnWidthMode?: TableColumnWidthModePreference;
   typewriterModeEnabled?: boolean;
   vimModeEnabled?: boolean;
@@ -83,6 +84,7 @@ export function SideDocumentPane({
   spellcheckIgnoredWords,
   spellchecker,
   status = null,
+  tableCellPaddingPx = 8,
   tableColumnWidthMode = "auto",
   typewriterModeEnabled = false,
   vimModeEnabled = false,
@@ -157,6 +159,7 @@ export function SideDocumentPane({
           spellcheckEnabled={spellcheckEnabled}
           spellcheckIgnoredWords={spellcheckIgnoredWords}
           spellchecker={spellchecker}
+          tableCellPaddingPx={tableCellPaddingPx}
           tableColumnWidthMode={tableColumnWidthMode}
           onAddSpellcheckIgnoredWord={onAddSpellcheckIgnoredWord}
           topInset="titlebar"

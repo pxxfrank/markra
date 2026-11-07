@@ -51,3 +51,6 @@ Thumbs.db
 apps/desktop/src-tauri/gen/schemas/windows-schema.json
 apps/desktop/src-tauri/gen/schemas/linux-schema.json
 .superpowers
+
+# WorkBuddy workspace data (local reports, logs, build scratch)
+.workbuddy/

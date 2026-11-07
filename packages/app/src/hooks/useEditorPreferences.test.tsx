@@ -116,6 +116,7 @@ vi.mock("../lib/settings/app-settings", () => ({
     showCodeBlockLineNumbers: true,
     showLineNumbers: false,
     showWordCount: true,
+    tableCellPaddingPx: 8,
     tableColumnWidthMode: "auto",
     typewriterModeEnabled: false,
     vimModeEnabled: false,
