@@ -1,0 +1,141 @@
+name: Build Windows installers
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag that receives the Windows installers"
+        required: true
+        default: "v2.14.4-table-fix"
+      source_ref:
+        description: "Branch, tag or commit to build"
+        required: true
+        default: "fix/table-input-swallowing-and-spacing"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-build-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Windows x64 installers
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop app
+        run: pnpm tauri build --bundles nsis,msi
+
+      - name: Upload installers to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find apps/desktop/src-tauri/target/release/bundle -type f \( -name '*.exe' -o -name '*.msi' \) | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No Windows installer was produced." >&2
+            exit 1
+          fi
+          printf 'Uploading:\n%s\n' "${files[@]}"
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+
+      - name: Update release notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { execFileSync } = require("node:child_process");
+          const { createHash } = require("node:crypto");
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const tag = process.env.RELEASE_TAG;
+          const bundleDir = "apps/desktop/src-tauri/target/release/bundle";
+          const walk = (dir, out = []) => {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walk(full, out);
+              else if (/\.(exe|msi)$/i.test(entry.name)) out.push(full);
+            }
+            return out;
+          };
+
+          const files = walk(bundleDir).sort();
+          if (files.length === 0) throw new Error("No installer found under " + bundleDir);
+          const lines = files.map((file) =>
+            `${createHash("sha256").update(fs.readFileSync(file)).digest("hex")}  ${path.basename(file)}`,
+          );
+
+          const body = execFileSync(
+            "gh",
+            ["release", "view", tag, "--json", "body", "-q", ".body"],
+            { encoding: "utf8" },
+          );
+
+          const shaStart = "<!-- SHA256:START -->";
+          const shaEnd = "<!-- SHA256:END -->";
+          if (!body.includes(shaStart) || !body.includes(shaEnd)) {
+            throw new Error("Release notes are missing SHA256 markers.");
+          }
+          const names = new Set(files.map((file) => path.basename(file)));
+          const [head, afterStart] = body.split(shaStart);
+          const [shaBlock, afterEnd] = afterStart.split(shaEnd);
+          const kept = shaBlock
+            .split("\n")
+            .map((line) => line.trimEnd())
+            .filter(Boolean)
+            .filter((line) => ![...names].some((name) => line.endsWith(`  ${name}`)));
+          let next = `${head}${shaStart}\n${[...kept, ...lines].join("\n")}\n${shaEnd}${afterEnd}`;
+
+          const buildStart = "<!-- WINDOWS-BUILD:START -->";
+          const buildEnd = "<!-- WINDOWS-BUILD:END -->";
+          if (next.includes(buildStart) && next.includes(buildEnd)) {
+            const [beforeBuild, afterBuildStart] = next.split(buildStart);
+            const [, afterBuildEnd] = afterBuildStart.split(buildEnd);
+            const sha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim().slice(0, 8);
+            const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+            const info = `Windows 包：\`${process.env.SOURCE_REF}\` @ \`${sha}\`（${stamp} UTC，GitHub Actions 构建）`;
+            next = `${beforeBuild}${buildStart}\n${info}\n${buildEnd}${afterBuildEnd}`;
+          }
+
+          fs.writeFileSync("release-notes.generated.md", next);
+          execFileSync("gh", ["release", "edit", tag, "--notes-file", "release-notes.generated.md"], { stdio: "inherit" });
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "## Windows installers\n\n```\n" + lines.join("\n") + "\n```\n");
+          console.log(lines.join("\n"));
+          NODE
