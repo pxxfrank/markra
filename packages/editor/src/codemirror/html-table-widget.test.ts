@@ -164,6 +164,21 @@ describe("HTML table editing widget", () => {
     expect(contents(view)[1]).toBe(cell);
   });
 
+  it("keeps the IME commit key from triggering table structure actions", () => {
+    const view = createView();
+    const cell = select(view, 1);
+    cell.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    input(cell, "测试");
+    cell.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+    const rows = view.dom.querySelectorAll("tr").length;
+    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    Object.defineProperty(event, "keyCode", { value: 229 });
+    // WebKit can fire compositionend before the key that confirms the candidate.
+    cell.dispatchEvent(event);
+    expect(view.dom.querySelectorAll("tr")).toHaveLength(rows);
+    expect(view.state.doc.toString()).toContain("测试");
+  });
+
   it("keeps composing text intact when a structural control is clicked", () => {
     const view = createView();
     const cell = select(view, 1);

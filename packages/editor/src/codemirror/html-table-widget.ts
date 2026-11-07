@@ -362,7 +362,9 @@ export class HtmlTableWidget extends WidgetType {
       if ((event.metaKey || event.ctrlKey) && ["s", "f", "p"].includes(event.key.toLowerCase())) return;
       event.stopPropagation();
       const cell = active();
-      if (!cell || event.isComposing || this.runtime.composing) return;
+      // WebKit reports the key that confirms an IME candidate with keyCode 229
+      // and may fire compositionend first, so isComposing alone is not enough.
+      if (!cell || event.isComposing || event.keyCode === 229 || this.runtime.composing) return;
       const point = contentPoint(cell);
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
         event.preventDefault(); if (event.shiftKey) redo(view); else undo(view);

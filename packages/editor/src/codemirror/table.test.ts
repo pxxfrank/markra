@@ -36,6 +36,11 @@ function createView(
   return view;
 }
 
+async function flushCompositionSync() {
+  // compositionend sync is deferred a task so WebKit's commit input lands first.
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
+
 afterEach(() => {
   for (const view of views.splice(0)) view.destroy();
   document.body.replaceChildren();
@@ -1703,7 +1708,7 @@ describe("tablePreviewPlugin", () => {
     table?.dispatchEvent(new CompositionEvent("compositionend", {
       bubbles: true,
     }));
-    await Promise.resolve();
+    await flushCompositionSync();
 
     expect(view.state.doc.toString()).toContain("| 再次 | 1 |");
     expect(view.dom.querySelector(".cm-markra-table")).not.toBeNull();
@@ -1765,7 +1770,7 @@ describe("tablePreviewPlugin", () => {
       bubbles: true,
       data: "中文",
     }));
-    await Promise.resolve();
+    await flushCompositionSync();
 
     expect(view.state.doc.toString()).toContain("| Name | Value中文 |");
     expect(view.dom.querySelectorAll(".cm-markra-table thead th")).toHaveLength(2);
@@ -1814,7 +1819,7 @@ describe("tablePreviewPlugin", () => {
       bubbles: true,
       data: "苏打水",
     }));
-    await Promise.resolve();
+    await flushCompositionSync();
 
     expect(view.state.doc.toString()).toContain("| 1 | 苏打水 |");
     expect(view.dom.querySelectorAll(".cm-markra-table thead th")).toHaveLength(2);
@@ -1842,7 +1847,7 @@ describe("tablePreviewPlugin", () => {
     expect(view.state.doc.toString()).toBe(doc);
 
     cell?.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
-    await Promise.resolve();
+    await flushCompositionSync();
 
     expect(view.state.doc.toString()).toContain("| 中文 | 1 |");
     expect(view.dom.querySelector(".cm-markra-table")).not.toBeNull();
@@ -2059,7 +2064,7 @@ describe("tablePreviewPlugin", () => {
       bubbles: true,
       data: "Mock",
     }));
-    await Promise.resolve();
+    await flushCompositionSync();
 
     expect(view.state.doc.toString()).toContain("| Al<br>Mockpha | 1 |");
     expect(view.state.doc.toString()).not.toContain("\u200b");

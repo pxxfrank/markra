@@ -1395,6 +1395,25 @@ class TableWidget extends WidgetType {
       this.defaultWidthMode,
     );
     let composing = false;
+    let compositionSyncTimer: number | null = null;
+    const cancelCompositionSync = () => {
+      if (compositionSyncTimer === null) return;
+      table.ownerDocument.defaultView?.clearTimeout(compositionSyncTimer);
+      compositionSyncTimer = null;
+    };
+    const scheduleCompositionSync = () => {
+      cancelCompositionSync();
+      // WebKit fires compositionend before the key or input event that commits
+      // the converted text. Syncing there serializes the raw pinyin buffer and
+      // rebuilds the widget before the commit lands, which swallows the word.
+      // Defer to the next task so the browser's commit input is applied first.
+      compositionSyncTimer = table.ownerDocument.defaultView?.setTimeout(() => {
+        compositionSyncTimer = null;
+        if (!table.isConnected) return;
+        const cell = activeVisualTableCell(view, table);
+        if (cell) syncVisualTableCell(view, this.preview, cell);
+      }, 0) ?? null;
+    };
 
     wrapper.className =
       "cm-markra-table-wrap tableWrapper markra-table-controls-wrapper";
@@ -1491,6 +1510,12 @@ class TableWidget extends WidgetType {
     table.dataset.widthMode = widthMode;
     table.classList.toggle("markra-table-width-auto", widthMode === "auto");
     table.addEventListener("keydown", (event) => {
+      if (composing || event.isComposing || event.keyCode === 229) {
+        // IME-owned keys confirm candidates; the table keymap and CodeMirror's
+        // source keymap must not treat them as Enter/Escape/Tab navigation.
+        event.stopPropagation();
+        return;
+      }
       if (event.key === "Enter" || event.key === "Escape") {
         const cell = activeVisualTableCell(view, table);
         if (!cell) return;
@@ -1587,6 +1612,7 @@ class TableWidget extends WidgetType {
     });
     table.addEventListener("compositionstart", (event) => {
       event.stopPropagation();
+      cancelCompositionSync();
       repairVisualTableCellSelection(view, table);
       stabilizeVisualTableCompositionCaret(view, table);
       composing = true;
@@ -1594,13 +1620,13 @@ class TableWidget extends WidgetType {
     table.addEventListener("compositionend", (event) => {
       event.stopPropagation();
       composing = false;
-      const cell = activeVisualTableCell(view, table);
-      if (cell) syncVisualTableCell(view, this.preview, cell);
+      scheduleCompositionSync();
     });
     table.addEventListener("input", (event) => {
       event.stopPropagation();
       // Replacing the widget mid-composition cancels native CJK input, so commit only after compositionend.
       if (composing || (event instanceof InputEvent && event.isComposing)) return;
+      cancelCompositionSync();
       const cell = activeVisualTableCell(view, table);
       if (cell) syncVisualTableCell(view, this.preview, cell);
     });
