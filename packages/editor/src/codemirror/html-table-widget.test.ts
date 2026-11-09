@@ -1,7 +1,7 @@
 import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { history, undo, redo } from "@codemirror/commands";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { liveMarkdown, rawHtmlPreviewPlugin } from "./index.ts";
 import "./dom.test-support.ts";
 
@@ -32,7 +32,7 @@ function input(cell: HTMLElement, html: string) {
   cell.innerHTML = html;
   cell.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
 }
-afterEach(() => { for (const view of views.splice(0)) view.destroy(); document.body.replaceChildren(); });
+afterEach(() => { for (const view of views.splice(0)) view.destroy(); document.body.replaceChildren(); vi.restoreAllMocks(); });
 
 describe("HTML table editing widget", () => {
   it("keeps merged cell alignment and source unchanged after editor recreation", () => {
@@ -162,6 +162,34 @@ describe("HTML table editing widget", () => {
     cell.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
     expect(view.state.doc.toString()).toContain("测试");
     expect(contents(view)[1]).toBe(cell);
+  });
+
+  it("keeps the textless-cell caret untouched while Chromium starts a composition", () => {
+    vi.spyOn(navigator, "vendor", "get").mockReturnValue("Google Inc.");
+    const view = createView('<table><tbody><tr><td></td><td>B</td></tr></tbody></table>');
+    const cell = select(view, 0);
+    const range = document.createRange();
+    range.setStart(cell, 0);
+    range.collapse(true);
+    document.getSelection()!.removeAllRanges();
+    document.getSelection()!.addRange(range);
+    const childrenBefore = [...cell.childNodes];
+
+    cell.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+
+    expect(cell.querySelector("[data-markra-table-caret-host]")).toBeNull();
+    expect([...cell.childNodes]).toEqual(childrenBefore);
+
+    cell.textContent = "你好";
+    cell.dispatchEvent(new InputEvent("input", {
+      bubbles: true,
+      data: "你好",
+      inputType: "insertCompositionText",
+      isComposing: true,
+    }));
+    cell.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+
+    expect(view.state.doc.toString()).toContain("你好");
   });
 
   it("keeps the IME commit key from triggering table structure actions", () => {

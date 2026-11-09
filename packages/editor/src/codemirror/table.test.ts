@@ -45,6 +45,7 @@ afterEach(() => {
   for (const view of views.splice(0)) view.destroy();
   document.body.replaceChildren();
   window.localStorage.clear();
+  vi.restoreAllMocks();
 });
 
 describe("tablePreviewPlugin", () => {
@@ -1777,7 +1778,7 @@ describe("tablePreviewPlugin", () => {
     expect(view.dom.querySelectorAll(".cm-markra-table tbody td")).toHaveLength(2);
   });
 
-  it("stabilizes the caret host before composing into an empty visual table header", async () => {
+  it("stabilizes the caret host before composing into an empty visual table header on WebKit", async () => {
     const doc = [
       "| 1 |  |",
       "| --- | --- |",
@@ -1824,6 +1825,95 @@ describe("tablePreviewPlugin", () => {
     expect(view.state.doc.toString()).toContain("| 1 | 苏打水 |");
     expect(view.dom.querySelectorAll(".cm-markra-table thead th")).toHaveLength(2);
     expect(view.dom.querySelectorAll(".cm-markra-table tbody td")).toHaveLength(2);
+  });
+
+  it("keeps the empty-cell caret untouched while Chromium starts a composition", async () => {
+    // Chromium's IME keeps its own composition range. Replacing the cell nodes
+    // or moving the selection inside compositionstart makes it reset the text
+    // store, so the IME drops the first syllables typed into an empty cell.
+    vi.spyOn(navigator, "vendor", "get").mockReturnValue("Google Inc.");
+    const doc = [
+      "| Name | Value |",
+      "| --- | --- |",
+      "|  | 1 |",
+      "",
+      "Edit",
+    ].join("\n");
+    const view = createView(doc);
+    const table = view.dom.querySelector<HTMLTableElement>(".cm-markra-table")!;
+    const cell = table.querySelector<HTMLTableCellElement>("tbody td")!;
+
+    // Chromium anchors the caret on the empty cell element itself.
+    cell.focus();
+    table.focus();
+    const selection = document.getSelection()!;
+    const range = document.createRange();
+    range.setStart(cell, 0);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const childrenBefore = [...cell.childNodes];
+    const anchorBefore = selection.anchorNode;
+
+    table.dispatchEvent(new CompositionEvent("compositionstart", {
+      bubbles: true,
+    }));
+
+    expect([...cell.childNodes]).toEqual(childrenBefore);
+    expect(document.getSelection()?.anchorNode).toBe(anchorBefore);
+    expect(cell.querySelector("[data-markra-table-caret-host]")).toBeNull();
+
+    cell.textContent = "你好";
+    table.dispatchEvent(new InputEvent("input", {
+      bubbles: true,
+      data: "你好",
+      inputType: "insertCompositionText",
+      isComposing: true,
+    }));
+    table.dispatchEvent(new CompositionEvent("compositionend", {
+      bubbles: true,
+      data: "你好",
+    }));
+    await flushCompositionSync();
+
+    expect(view.state.doc.toString()).toContain("| 你好 | 1 |");
+    expect(view.dom.querySelector(".cm-markra-table")).not.toBeNull();
+  });
+
+  it("ignores an IME confirm key that arrives after compositionend", async () => {
+    const doc = [
+      "| Name | Value |",
+      "| --- | --- |",
+      "| Alpha | 1 |",
+      "",
+      "Edit",
+    ].join("\n");
+    const view = createView(doc);
+    const table = view.dom.querySelector<HTMLTableElement>(".cm-markra-table")!;
+    const cell = table.querySelector<HTMLTableCellElement>("tbody td")!;
+    cell.focus();
+
+    table.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    cell.textContent = "你好";
+    table.dispatchEvent(new CompositionEvent("compositionend", {
+      bubbles: true,
+      data: "你好",
+    }));
+    await flushCompositionSync();
+
+    // WebKit can report the candidate-confirming Enter with the legacy 229 code
+    // after compositionend, when isComposing is already false.
+    const event = new KeyboardEvent("keydown", {
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+    });
+    Object.defineProperty(event, "keyCode", { value: 229 });
+    table.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(cell);
+    expect(view.state.doc.toString()).toContain("| 你好 | 1 |");
   });
 
   it("commits a visual table cell after IME composition finishes", async () => {

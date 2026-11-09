@@ -1,5 +1,16 @@
 export const tableCaretPlaceholder = "\u200b";
 
+export function usesWebKitImeCompositionCaret(element: HTMLElement) {
+  // Chromium's IME owns its composition range. Replacing a table cell's DOM or
+  // its selection while compositionstart is handled makes Chromium treat the
+  // text store as reset: the IME drops the syllables it already buffered, so
+  // the first key(s) typed into an empty cell never reach the document. Only
+  // WebKit needs the zero-width caret anchor that the table widgets install
+  // during compositionstart.
+  const vendor = element.ownerDocument.defaultView?.navigator.vendor;
+  return typeof vendor === "string" && vendor.includes("Apple");
+}
+
 export function createTableCaretHost(ownerDocument: Document) {
   const host = ownerDocument.createElement("span");
   host.dataset.markraTableCaretHost = "true";

@@ -1,7 +1,7 @@
 import { createLucideIcon } from "@markra/shared";
 import { TableCellsMerge, TableCellsSplit } from "lucide";
 import { createTableControls, defaultTableLabels, type TableControlLabels } from "./table-controls.ts";
-import { clearTableSelection, activeTableCell, placeTableCellCaret, tableCellCaretOffset, createTableCaretHost, tableCaretPlaceholder } from "./table-selection.ts";
+import { clearTableSelection, activeTableCell, placeTableCellCaret, tableCellCaretOffset, createTableCaretHost, tableCaretPlaceholder, usesWebKitImeCompositionCaret } from "./table-selection.ts";
 import { transformHtmlTable, htmlTableAlignment, htmlTableWidthMode, type HtmlTableAction } from "../html-table-actions.ts";
 import { isolateHistory, redo, undo } from "@codemirror/commands";
 import { WidgetType, type EditorView } from "@codemirror/view";
@@ -309,7 +309,7 @@ export class HtmlTableWidget extends WidgetType {
       const cell = insertTarget();
       if (!cell) return;
       this.beginCell(index, contentPoint(cell));
-      if (!cell.textContent) {
+      if (!cell.textContent && usesWebKitImeCompositionCaret(table)) {
         const host = createTableCaretHost(document);
         const selection = document.getSelection();
         const range = selection?.rangeCount ? selection.getRangeAt(0) : null;

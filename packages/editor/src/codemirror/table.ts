@@ -6,6 +6,7 @@ import {
   placeTableCellCaret as placeVisualTableCellCaret,
   tableCellCaretOffset,
   tableCaretPlaceholder as TABLE_CARET_PLACEHOLDER,
+  usesWebKitImeCompositionCaret,
 } from "./table-selection.ts";
 import type { EditorState } from "@codemirror/state";
 import {
@@ -571,8 +572,21 @@ function stabilizeVisualTableCompositionCaret(
   view: CodeMirrorView,
   table: HTMLTableElement,
 ) {
+  if (!usesWebKitImeCompositionCaret(table)) return;
   const cell = activeVisualTableCell(view, table);
   if (!cell || visualTableCellSource(cell) !== "") return;
+
+  // A live text anchor already keeps the IME range inside this cell. Replacing
+  // it mid-composition can only drop the composition, so leave it alone.
+  const selection = cell.ownerDocument.getSelection();
+  const anchorNode = selection?.anchorNode;
+  if (
+    anchorNode instanceof Text &&
+    cell.contains(anchorNode) &&
+    anchorNode.data.length > 0
+  ) {
+    return;
+  }
 
   // An empty Text node is a valid DOM range but WebKit may move IME text to
   // the surrounding table row. A zero-width span keeps the native insertion
@@ -580,7 +594,6 @@ function stabilizeVisualTableCompositionCaret(
   const caretHost = createVisualTableCaretHost(cell.ownerDocument);
   cell.replaceChildren(caretHost.host);
   cell.focus();
-  const selection = cell.ownerDocument.getSelection();
   if (!selection) return;
   const range = cell.ownerDocument.createRange();
   range.setStart(caretHost.text, TABLE_CARET_PLACEHOLDER.length);
@@ -1512,7 +1525,7 @@ class TableWidget extends WidgetType {
     table.addEventListener("keydown", (event) => {
       if (composing || event.isComposing || event.keyCode === 229) {
         // IME-owned keys confirm candidates; the table keymap and CodeMirror's
-        // source keymap must not treat them as Enter/Escape/Tab navigation.
+        // source keymap must not treat them as Enter, Escape or Tab navigation.
         event.stopPropagation();
         return;
       }
