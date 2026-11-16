@@ -103,12 +103,61 @@ function snapshot() {
   };
 }
 
+function tableMetrics() {
+  const table = tableElement();
+  const scroll = table?.parentElement;
+  const columns = [...(table?.querySelectorAll<HTMLTableColElement>(
+    "colgroup[data-markra-table-column-widths] > col",
+  ) ?? [])].map((column) => Number.parseFloat(column.style.width) || 0);
+  return {
+    mode: table?.dataset.widthMode ?? null,
+    renderedWidth: table?.getBoundingClientRect().width ?? 0,
+    inlineWidth: table?.style.getPropertyValue("width") ?? "",
+    columns,
+    cellWidths: [...(table?.querySelectorAll<HTMLTableCellElement>("thead th") ?? [])].map(
+      (cell) => Math.round(cell.getBoundingClientRect().width * 100) / 100,
+    ),
+    scrollWidth: scroll?.scrollWidth ?? 0,
+  };
+}
+
+function resizeColumn(column: number, deltaX: number) {
+  const handle = document.querySelector<HTMLElement>(
+    `.markra-table-column-resize[data-column="${column}"]`,
+  );
+  if (!handle) throw new Error(`resize handle not found: ${column}`);
+  const rect = handle.getBoundingClientRect();
+  const startX = Math.round(rect.left + rect.width / 2);
+  handle.dispatchEvent(new PointerEvent("pointerdown", {
+    bubbles: true,
+    cancelable: true,
+    button: 0,
+    clientX: startX,
+  }));
+  window.dispatchEvent(new PointerEvent("pointermove", { clientX: startX + deltaX }));
+  window.dispatchEvent(new PointerEvent("pointerup", { clientX: startX + deltaX }));
+}
+
+function clearTableWidthPreferences() {
+  for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.localStorage.key(index);
+    if (key?.startsWith("markra:table-")) window.localStorage.removeItem(key);
+  }
+}
+
 const api = {
   view,
   initialDoc,
   setDoc(text: string) {
+    clearTableWidthPreferences();
+    // Drop the current table widget first so each scenario starts from a fresh
+    // DOM. Reusing an identical widget would keep the previous layout while
+    // its saved widths were just cleared.
     view.dispatch({
-      changes: { from: 0, to: view.state.doc.length, insert: text },
+      changes: { from: 0, to: view.state.doc.length, insert: "" },
+    });
+    view.dispatch({
+      changes: { from: 0, insert: text },
       selection: { anchor: text.length },
     });
     view.focus();
@@ -141,6 +190,8 @@ const api = {
   setCssVariable(name: string, value: string) {
     (document.getElementById("paper") as HTMLElement).style.setProperty(name, value);
   },
+  tableMetrics,
+  resizeColumn,
   snapshot,
   async flush(frames = 2) {
     for (let index = 0; index < frames; index += 1) {

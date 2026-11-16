@@ -15,7 +15,7 @@ import {
   WidgetType,
   type EditorView as CodeMirrorView,
 } from "@codemirror/view";
-import { createTableControls, defaultTableLabels, type TableControlLabels } from "./table-controls.ts";
+import { createTableControls, defaultTableLabels, setTableWidthModeUi, type TableControlLabels, type TableWidthModeState } from "./table-controls.ts";
 import type { MarkraSourceRange } from "../math-syntax.ts";
 import {
   renderInlineMarkdown,
@@ -29,6 +29,16 @@ import {
 } from "./links.ts";
 import { defineMarkraPlugin } from "./plugin.ts";
 import { getMarkraRenderers, markraRenderer } from "./renderers.ts";
+import {
+  applyTableColumnWidths,
+  attachTableColumnResizers,
+  clearStoredTableColumnWidths,
+  clearTableColumnWidthsLayout,
+  readStoredTableColumnWidths,
+  syncTableColumnWidthsAlignment,
+  writeStoredTableColumnWidths,
+  type TableColumnResizers,
+} from "./table-resize.ts";
 
 export type CodeMirrorTableAlignment = "center" | "left" | "right" | null;
 export type CodeMirrorTableWidthMode = "auto" | "even";
@@ -477,19 +487,15 @@ function applyWidthModeToTableControls(
   for (const wrapper of view.dom.querySelectorAll<HTMLElement>(
     ".cm-markra-table-wrap[data-table-from]",
   )) {
-    wrapper.dataset.widthMode = mode;
     const table = wrapper.querySelector<HTMLTableElement>(".cm-markra-table");
-    if (table) {
-      table.dataset.widthMode = mode;
-      table.classList.toggle("markra-table-width-auto", mode === "auto");
-    }
-    const button = wrapper.querySelector<HTMLButtonElement>(
-      ".markra-table-width-button",
+    if (!table) continue;
+    // Saved column widths are per-table overrides. Changing the document mode
+    // only affects tables that follow it; customized tables keep their layout.
+    const custom = Boolean(
+      table.querySelector(":scope > colgroup[data-markra-table-column-widths]"),
     );
-    if (button) {
-      button.ariaPressed = String(mode === "auto");
-      button.dataset.mode = mode;
-    }
+    setTableWidthModeUi(wrapper, table, custom ? "custom" : mode);
+    if (!custom) clearTableColumnWidthsLayout(table);
   }
 }
 
@@ -1211,6 +1217,7 @@ interface TableWidgetRuntime {
   inlineSourceDocument: Document | null;
   inlineSourceMouseDownHandler: ((event: MouseEvent) => void) | null;
   preview: TablePreview;
+  resizers: TableColumnResizers | null;
 }
 
 function tablePreviewContentKey(preview: TablePreview) {
@@ -1257,6 +1264,7 @@ function syncReusedTableCells(
   const tableAlignment = normalizedTableAlignment(preview) ?? "left";
   dom.dataset.tableAlignment = tableAlignment;
   table.dataset.tableAlignment = tableAlignment;
+  syncTableColumnWidthsAlignment(table, tableAlignment);
 
   for (const cell of table.querySelectorAll<HTMLTableCellElement>("th, td")) {
     const header = cell.dataset.tableHeader === "true";
@@ -1300,6 +1308,7 @@ class TableWidget extends WidgetType {
       inlineSourceDocument: null,
       inlineSourceMouseDownHandler: null,
       preview,
+      resizers: null,
     };
   }
 
@@ -1368,6 +1377,7 @@ class TableWidget extends WidgetType {
     this.runtime = from.runtime;
     this.runtime.preview = nextPreview;
     dom.dataset.tableFrom = String(nextPreview.from);
+    this.runtime.resizers?.measure();
     return true;
   }
 
@@ -1376,6 +1386,8 @@ class TableWidget extends WidgetType {
   }
 
   destroy() {
+    this.runtime.resizers?.destroy();
+    this.runtime.resizers = null;
     this.runtime.controls?.destroy();
     this.runtime.controls = null;
     if (
@@ -1402,11 +1414,23 @@ class TableWidget extends WidgetType {
     const body = document.createElement("tbody");
     const activeAlignment = normalizedTableAlignment(this.preview);
     const tableAlignment = activeAlignment ?? "left";
-    const widthMode = readStoredWidthMode(
+    const columnCount = this.preview.header.length;
+    const headerSources = this.preview.header.map((cell) => cell.source);
+    const storedColumnWidths = readStoredTableColumnWidths(
       document,
       this.getDocumentKey(),
-      this.defaultWidthMode,
+      headerSources,
+      columnCount,
     );
+    // A table with saved pixel widths keeps its user-chosen layout regardless
+    // of the document-wide default mode.
+    const widthMode: TableWidthModeState = storedColumnWidths
+      ? "custom"
+      : readStoredWidthMode(
+          document,
+          this.getDocumentKey(),
+          this.defaultWidthMode,
+        );
     let composing = false;
     let compositionSyncTimer: number | null = null;
     const cancelCompositionSync = () => {
@@ -1682,17 +1706,41 @@ class TableWidget extends WidgetType {
     table.append(head, body);
     tableScroll.append(table);
     wrapper.append(tableScroll);
+    if (storedColumnWidths) {
+      applyTableColumnWidths(table, storedColumnWidths, tableAlignment);
+    }
     this.runtime.controls = createTableControls(wrapper, table, {
       labels: this.labels,
       readOnly: () => view.state.readOnly,
       shape: () => ({ columns: this.preview.header.length, rows: this.preview.rows.length + 1 }),
       alignment: () => normalizedTableAlignment(this.preview),
-      widthMode: () => wrapper.dataset.widthMode === "even" ? "even" : "auto",
+      widthMode: () => {
+        const mode = wrapper.dataset.widthMode;
+        return mode === "even" || mode === "custom" ? mode : "auto";
+      },
       resize: (columns, rows) => resizeTable(view, this.preview, columns, rows),
       align: alignment => alignTable(view, this.preview, alignment),
       setWidthMode: mode => {
         writeStoredWidthMode(document, this.getDocumentKey(), mode);
+        // Only this table leaves its custom width; other customized tables
+        // keep their own overrides.
+        clearStoredTableColumnWidths(
+          document,
+          this.getDocumentKey(),
+          this.preview.header.map((cell) => cell.source),
+          this.preview.header.length,
+        );
+        // Also clear the key that created this widget, in case a header edit
+        // changed the signature while the table DOM was reused.
+        clearStoredTableColumnWidths(
+          document,
+          this.getDocumentKey(),
+          headerSources,
+          columnCount,
+        );
+        clearTableColumnWidthsLayout(table);
         applyWidthModeToTableControls(view, mode);
+        view.requestMeasure();
       },
       addRow: () => addRow(view, this.preview),
       addColumn: () => addColumn(view, this.preview),
@@ -1701,6 +1749,43 @@ class TableWidget extends WidgetType {
       deleteTable: () => deleteTable(view, this.preview),
       cellPosition: cell => ({ row: Number(cell.dataset.tableRow), column: Number(cell.dataset.tableColumn), header: cell.dataset.tableHeader === "true" }),
       focusEditor: () => view.focus(),
+    });
+    this.runtime.resizers = attachTableColumnResizers({
+      view,
+      scroll: tableScroll,
+      table,
+      label: this.labels.resizeColumn,
+      columnCount,
+      readOnly: () => view.state.readOnly,
+      alignment: () => normalizedTableAlignment(this.preview) ?? "left",
+      currentMode: () => {
+        const mode = wrapper.dataset.widthMode;
+        return mode === "even" || mode === "custom" ? mode : "auto";
+      },
+      fallbackMode: () =>
+        readStoredWidthMode(document, this.getDocumentKey(), this.defaultWidthMode),
+      onModeChange: mode => setTableWidthModeUi(wrapper, table, mode),
+      persist: widths =>
+        writeStoredTableColumnWidths(
+          document,
+          this.getDocumentKey(),
+          this.preview.header.map((cell) => cell.source),
+          widths,
+        ),
+      clearStored: () => {
+        clearStoredTableColumnWidths(
+          document,
+          this.getDocumentKey(),
+          this.preview.header.map((cell) => cell.source),
+          this.preview.header.length,
+        );
+        clearStoredTableColumnWidths(
+          document,
+          this.getDocumentKey(),
+          headerSources,
+          columnCount,
+        );
+      },
     });
     wrapper.addEventListener("copy", (event) => {
       if (!event.clipboardData) return;
@@ -1731,16 +1816,67 @@ const tableTheme = EditorView.baseTheme({
   ".cm-markra-table-wrap": {
     display: "block",
     margin: "1.5em 0",
+    maxWidth: "100%",
+    minWidth: "0",
     overflow: "visible",
     padding: "1.75em 2.25em 2.25em 0",
     position: "relative",
+    width: "100%",
   },
   ".cm-markra-table-hidden-line": {
     display: "none",
   },
   ".markra-table-scroll": {
+    // User-resized tables can be wider than the editor column. Contain the
+    // inline size so the editor keeps its width and only the table scrolls.
+    contain: "inline-size",
     display: "block",
+    maxWidth: "100%",
     overflowX: "auto",
+    position: "relative",
+    width: "100%",
+  },
+  ".markra-table-column-resize": {
+    cursor: "col-resize",
+    marginLeft: "-3px",
+    opacity: "0",
+    pointerEvents: "none",
+    position: "absolute",
+    touchAction: "none",
+    width: "6px",
+    zIndex: "8",
+  },
+  '.markra-table-column-resize[data-last="true"]': {
+    marginLeft: "-6px",
+  },
+  ".cm-markra-table-wrap:hover .markra-table-column-resize, .cm-markra-table-wrap:focus-within .markra-table-column-resize": {
+    opacity: "1",
+    pointerEvents: "auto",
+  },
+  ".markra-table-column-resize::after": {
+    background: "color-mix(in srgb, currentColor 22%, transparent)",
+    bottom: "0",
+    content: '""',
+    left: "50%",
+    position: "absolute",
+    top: "0",
+    width: "1px",
+  },
+  '.markra-table-column-resize:hover::after, .markra-table-column-resize[data-active="true"]::after': {
+    background: "color-mix(in srgb, var(--accent, currentColor) 65%, transparent)",
+  },
+  ".markra-table-column-resize:hover, .markra-table-column-resize:focus-visible": {
+    background: "color-mix(in srgb, var(--accent, currentColor) 14%, transparent)",
+    outline: "1px solid color-mix(in srgb, var(--accent, currentColor) 55%, transparent)",
+    outlineOffset: "-2px",
+  },
+  ".markra-table-column-guide": {
+    background: "color-mix(in srgb, var(--accent, currentColor) 70%, transparent)",
+    marginLeft: "-1px",
+    pointerEvents: "none",
+    position: "absolute",
+    width: "2px",
+    zIndex: "9",
   },
   ".markra-table-align-controls": {
     alignItems: "center",

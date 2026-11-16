@@ -357,6 +357,119 @@ try {
           ok: before === "8px 12px 8px 12px" && after === "20px 30px 20px 30px" };
       })()`,
     },
+    {
+      name: "column-resize-drag",
+      expression: `(async () => {
+        const m = window.__markra;
+        m.setDoc(m.initialDoc);
+        m.setCssVariable("--editor-table-cell-padding", "8px 12px");
+        await m.flush(3);
+        const before = m.tableMetrics();
+        m.resizeColumn(0, 80);
+        await m.flush(3);
+        const after = m.tableMetrics();
+        return { before, after, doc: m.getDoc(),
+          ok: m.getDoc() === m.initialDoc &&
+            before.mode !== "custom" &&
+            after.mode === "custom" &&
+            after.columns.length === 3 &&
+            after.columns[0] > before.cellWidths[0] + 40 &&
+            after.renderedWidth > before.renderedWidth + 40 &&
+            after.inlineWidth !== "" };
+      })()`,
+    },
+    {
+      name: "column-resize-reset",
+      expression: `(async () => {
+        const m = window.__markra;
+        m.setDoc(m.initialDoc);
+        await m.flush(3);
+        m.resizeColumn(0, 50);
+        await m.flush(2);
+        const resized = m.tableMetrics();
+        document.querySelector(".markra-table-width-button")?.click();
+        await m.flush(3);
+        const reset = m.tableMetrics();
+        return { resized, reset, doc: m.getDoc(),
+          ok: resized.mode === "custom" && reset.mode !== "custom" &&
+            reset.columns.length === 0 && reset.inlineWidth === "" &&
+            m.getDoc() === m.initialDoc };
+      })()`,
+    },
+    {
+      name: "column-resize-survives-typing",
+      expression: `(async () => {
+        const m = window.__markra;
+        m.setDoc(m.initialDoc);
+        await m.flush(3);
+        m.resizeColumn(1, 40);
+        await m.flush(2);
+        m.focusCell({ row: 0, column: 0 }, 5);
+        m.typeBurst("Z");
+        await m.flush(3);
+        const metrics = m.tableMetrics();
+        return { metrics, doc: m.getDoc(),
+          ok: m.getDoc().includes("| AlphaZ | 1 | OK |") &&
+            metrics.mode === "custom" && metrics.columns.length === 3 };
+      })()`,
+    },
+    {
+      name: "column-resize-survives-add-row",
+      expression: `(async () => {
+        const m = window.__markra;
+        m.setDoc(m.initialDoc);
+        await m.flush(3);
+        m.resizeColumn(0, 30);
+        await m.flush(2);
+        const before = m.tableMetrics();
+        document.querySelector('[aria-label="Add row below"]')?.click();
+        await m.flush(4);
+        const after = m.tableMetrics();
+        return { before, after, doc: m.getDoc(),
+          ok: before.mode === "custom" && after.mode === "custom" &&
+            JSON.stringify(after.columns) === JSON.stringify(before.columns) &&
+            m.getDoc().includes("|  |  |  |") };
+      })()`,
+    },
+    {
+      name: "column-resize-tracks-alignment",
+      expression: `(async () => {
+        const m = window.__markra;
+        m.setDoc(m.initialDoc);
+        await m.flush(3);
+        m.resizeColumn(0, 30);
+        await m.flush(2);
+        document.querySelector('[aria-label="Align table center"]')?.click();
+        await m.flush(4);
+        const table = document.querySelector(".cm-markra-table");
+        const metrics = m.tableMetrics();
+        return { mode: metrics.mode, margin: table?.style.getPropertyValue("margin-inline"),
+          alignment: table?.dataset.tableAlignment, doc: m.getDoc(),
+          ok: metrics.mode === "custom" && metrics.columns.length === 3 &&
+            table?.style.getPropertyValue("margin-inline") === "auto" &&
+            table?.dataset.tableAlignment === "center" };
+      })()`,
+    },
+    {
+      name: "column-resize-from-even-mode",
+      expression: `(async () => {
+        const m = window.__markra;
+        m.setDoc(m.initialDoc);
+        await m.flush(3);
+        const button = document.querySelector(".markra-table-width-button");
+        button?.click();
+        await m.flush(3);
+        const before = m.tableMetrics();
+        m.resizeColumn(2, -30);
+        await m.flush(3);
+        const after = m.tableMetrics();
+        return { before, after, doc: m.getDoc(),
+          ok: before.mode === "even" && after.mode === "custom" &&
+            after.columns.length === 3 &&
+            after.columns[2] < before.cellWidths[2] - 10 &&
+            m.getDoc() === m.initialDoc };
+      })()`,
+    },
   ];
 
   const results = [];

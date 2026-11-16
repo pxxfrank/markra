@@ -212,6 +212,7 @@ function markdownExtension({
     deleteColumn: t(language, "editor.table.deleteColumn"),
     deleteRow: t(language, "editor.table.deleteRow"),
     deleteTable: t(language, "editor.table.deleteTable"),
+    resizeColumn: t(language, "editor.table.resizeColumn"),
     resizeTableTo: t(language, "editor.table.resizeTableTo"),
     tableColumns: t(language, "editor.table.columns"),
     tableRows: t(language, "editor.table.rows"),

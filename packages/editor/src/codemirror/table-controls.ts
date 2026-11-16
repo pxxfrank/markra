@@ -3,6 +3,7 @@ import { Minus, Plus, Trash2 } from "lucide";
 
 export type TableAlignment = "left" | "center" | "right" | null;
 export type TableWidthMode = "auto" | "even";
+export type TableWidthModeState = TableWidthMode | "custom";
 
 export interface TableControlLabels {
   addColumnRight: string;
@@ -15,6 +16,7 @@ export interface TableControlLabels {
   deleteColumn: string;
   deleteRow: string;
   deleteTable: string;
+  resizeColumn: string;
   resizeTableTo: string;
   tableColumns: string;
   tableRows: string;
@@ -31,6 +33,7 @@ export const defaultTableLabels: TableControlLabels = {
   deleteColumn: "Delete column",
   deleteRow: "Delete row",
   deleteTable: "Delete table",
+  resizeColumn: "Resize column",
   resizeTableTo: "Resize table to {columns} columns by {rows} rows",
   tableColumns: "Table columns",
   tableRows: "Table rows",
@@ -133,7 +136,7 @@ export interface TableControlOptions {
   readOnly: () => boolean;
   shape: () => TableShape;
   alignment: () => TableAlignment;
-  widthMode: () => TableWidthMode;
+  widthMode: () => TableWidthModeState;
   resize: (columns: number, rows: number) => unknown;
   align: (alignment: Exclude<TableAlignment, null>) => unknown;
   setWidthMode: (mode: TableWidthMode) => unknown;
@@ -225,6 +228,23 @@ function createSizePicker(document: Document, options: TableControlOptions) {
   };
 }
 
+export function setTableWidthModeUi(
+  wrapper: HTMLElement,
+  table: HTMLTableElement,
+  mode: TableWidthModeState,
+) {
+  wrapper.dataset.widthMode = mode;
+  table.dataset.widthMode = mode;
+  table.classList.toggle("markra-table-width-auto", mode === "auto");
+  const button = wrapper.querySelector<HTMLButtonElement>(
+    ".markra-table-width-button",
+  );
+  if (button) {
+    button.dataset.mode = mode;
+    button.ariaPressed = String(mode === "auto");
+  }
+}
+
 export function createTableControls(wrapper: HTMLElement, table: HTMLTableElement, options: TableControlOptions) {
   const document = wrapper.ownerDocument;
   const picker = createSizePicker(document, options);
@@ -239,7 +259,12 @@ export function createTableControls(wrapper: HTMLElement, table: HTMLTableElemen
     return button;
   });
   const toggleWidth = () => {
-    options.setWidthMode(options.widthMode() === "auto" ? "even" : "auto"); update();
+    const mode = options.widthMode();
+    // A custom width is entered by dragging a column boundary. Clicking the
+    // mode button leaves it and returns to the document-level mode instead of
+    // cycling into a third persistent state.
+    options.setWidthMode(mode === "custom" ? "auto" : mode === "auto" ? "even" : "auto");
+    update();
   };
   const width = createTableControl(document, "markra-table-width-button", options.labels.columnWidthMode, toggleWidth, createTableWidthIcon(document));
   width.addEventListener("keydown", event => {
@@ -288,8 +313,7 @@ export function createTableControls(wrapper: HTMLElement, table: HTMLTableElemen
     deleteColumn.disabled ||= options.shape().columns <= 1;
     const alignment = options.alignment();
     for (const button of alignments) button.ariaPressed = String(button.dataset.alignment === alignment);
-    width.dataset.mode = options.widthMode(); width.ariaPressed = String(options.widthMode() === "auto");
-    extraButtons.forEach((button, index) => { button.disabled = readonly || !options.extras![index]!.enabled(); });
+    width.dataset.mode = options.widthMode(); width.ariaPressed = String(options.widthMode() === "auto");    extraButtons.forEach((button, index) => { button.disabled = readonly || !options.extras![index]!.enabled(); });
   }
   update();
   return { update, destroy() { picker.close(); wrapper.removeEventListener("mousemove", hover); wrapper.removeEventListener("mouseleave", leave); } };
