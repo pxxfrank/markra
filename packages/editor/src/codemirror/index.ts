@@ -14,6 +14,7 @@ import {
   type MarkraPlugin,
 } from "./plugin.ts";
 import { livePreview, type LivePreviewConfig } from "./preview.ts";
+import { markdownEnterKeymap } from "./markdown-navigation.ts";
 import { markraSlashMenu } from "./slash-menu.ts";
 import { markraTheme } from "./theme.ts";
 
@@ -159,6 +160,7 @@ export type {
 } from "./insertions.ts";
 export { insertionsPlugin } from "./insertions.ts";
 export { markdownEditingPlugin } from "./markdown-editing.ts";
+export { markdownEnterKeymap } from "./markdown-navigation.ts";
 export type { MarkdownShortcutsPluginOptions } from "./markdown-shortcuts.ts";
 export { markdownShortcutsPlugin } from "./markdown-shortcuts.ts";
 export type {
@@ -268,6 +270,7 @@ export function liveMarkdown(config: LiveMarkdownConfig = {}): Extension {
     ...previewConfig
   } = config;
   return [
+    markdownEnterKeymap,
     highlight
       ? markraLanguage
       : markdown({ extensions: [GFM, markraSetextHeading] }),

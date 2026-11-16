@@ -476,6 +476,115 @@ describe("markdownEditingPlugin", () => {
     expect(view.state.doc.toString()).toBe("- First\n- ");
   });
 
+  it("creates an empty item without a blank line in a tight list", () => {
+    const doc = "- First\n- Second";
+    const view = createView(doc, "- First".length);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- First\n- \n- Second");
+    expect(view.state.selection.main.head).toBe("- First\n- ".length);
+  });
+
+  it("keeps a tight bullet list tight when Enter is pressed on an empty middle item", () => {
+    const doc = "- First\n- \n- Second";
+    const position = doc.indexOf("- \n") + "- ".length;
+    const view = createView(doc, position);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- First\n- Second");
+    expect(view.state.selection.main.head).toBe("- First".length);
+    expectFullHeightEmptyLines(view, 0);
+  });
+
+  it("renumbers an ordered list when its empty middle item is removed", () => {
+    const doc = "1. First\n2. \n3. Second";
+    const position = doc.indexOf("2. \n") + "2. ".length;
+    const view = createView(doc, position);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("1. First\n2. Second");
+    expect(view.state.selection.main.head).toBe("1. First".length);
+    expectFullHeightEmptyLines(view, 0);
+  });
+
+  it("keeps a task list tight when its empty middle item is removed", () => {
+    const doc = "- [ ] First\n- [ ] \n- [ ] Second";
+    const position = doc.indexOf("- [ ] \n") + "- [ ] ".length;
+    const view = createView(doc, position);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- [ ] First\n- [ ] Second");
+    expect(view.state.selection.main.head).toBe("- [ ] First".length);
+    expectFullHeightEmptyLines(view, 0);
+  });
+
+  it("keeps nested and quoted lists tight when their empty middle item is removed", () => {
+    const nested = "- Parent\n  - Child 1\n  - \n  - Child 2";
+    const nestedEmptyFrom = nested.indexOf("  - \n");
+    const nestedView = createView(
+      nested,
+      nestedEmptyFrom + "  - ".length,
+    );
+    expect(press(nestedView, "Enter")).toBe(true);
+    expect(nestedView.state.doc.toString()).toBe(
+      "- Parent\n  - Child 1\n  - Child 2",
+    );
+    expect(nestedView.state.selection.main.head).toBe(nestedEmptyFrom - 1);
+    expectFullHeightEmptyLines(nestedView, 0);
+
+    const quoted = "> - First\n> - \n> - Second";
+    const quotedEmptyFrom = quoted.indexOf("> - \n");
+    const quotedView = createView(
+      quoted,
+      quotedEmptyFrom + "> - ".length,
+    );
+    expect(press(quotedView, "Enter")).toBe(true);
+    expect(quotedView.state.doc.toString()).toBe("> - First\n> - Second");
+    expect(quotedView.state.selection.main.head).toBe(quotedEmptyFrom - 1);
+    expectFullHeightEmptyLines(quotedView, 0);
+  });
+
+  it("keeps the existing blank line of a loose list when the empty item is removed", () => {
+    const doc = "- First\n\n- \n- Second";
+    const emptyFrom = doc.indexOf("- \n- Second");
+    const view = createView(doc, emptyFrom + "- ".length);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- First\n\n- Second");
+    expect(view.state.selection.main.head).toBe(emptyFrom - 1);
+    expectFullHeightEmptyLines(view, 1);
+  });
+
+  it("removes an empty trailing item without adding another blank line before following content", () => {
+    const doc = "- First\n- Second\n- \n\nAfter";
+    const position = doc.indexOf("- \n\nAfter") + "- ".length;
+    const view = createView(doc, position);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- First\n- Second\n\nAfter");
+    expect(view.state.selection.main.head).toBe("- First\n- Second".length);
+    expectFullHeightEmptyLines(view, 1);
+  });
+
+  it("keeps one separator blank line in a loose list when its empty tail item is removed", () => {
+    const doc = "- First\n\n- \n\nAfter";
+    const emptyFrom = doc.indexOf("- \n\nAfter");
+    const view = createView(doc, emptyFrom + "- ".length);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- First\n\nAfter");
+    expect(view.state.selection.main.head).toBe(emptyFrom - 1);
+    expectFullHeightEmptyLines(view, 1);
+  });
+
+  it("still exits the list from its empty last item", () => {
+    const doc = "- First\n- Second\n- ";
+    const view = createView(doc, doc.length);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- First\n- Second\n");
+  });
+
   it("inserts two spaces at the cursor for plain-text Tab", () => {
     const view = createView("Alphabeta", "Alpha".length);
 

@@ -8,6 +8,7 @@ import { markraSetextHeading } from "@markra/markdown";
 import {
   codeMirrorLocationCue,
   codeMirrorTypewriterMode,
+  markdownEnterKeymap,
   markdownShortcutsPlugin,
   markdownSourceSyntaxHighlighting,
   markdownSyntaxHighlighting,
@@ -346,6 +347,7 @@ export function MarkdownSourceEditor({
       vimModeCompartmentRef.current.of([]),
       minimalSetup,
       markdownSourceSharedHistoryExtension(onUndoRef, onRedoRef),
+      markdownEnterKeymap,
       // Source and preview must classify headings identically for outline navigation.
       markdown({
         base: markdownLanguage,
